@@ -1,10 +1,15 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 public class ResourceManager : MonoBehaviour
 {
     public static ResourceManager Instance { get; private set; }
+    
+    // UI güncellemeleri için Event
+    public Action<ResourceData, int> OnResourceChanged;
+
     
     private Dictionary<ResourceData, int> resourceStocks = new Dictionary<ResourceData, int>();
     public List<ResourceData> availableResources;
@@ -43,6 +48,7 @@ public class ResourceManager : MonoBehaviour
             if (!resourceStocks.ContainsKey(data)) resourceStocks.Add(data, 0);
             resourceStocks[data] += amount;
             Debug.Log($"{data.resourceName} yeni miktar: {resourceStocks[data]}");
+            OnResourceChanged?.Invoke(data, resourceStocks[data]);
         }
     }
 
@@ -52,6 +58,32 @@ public class ResourceManager : MonoBehaviour
         if (data != null && resourceStocks.ContainsKey(data))
         {
             resourceStocks[data] -= amount;
+            OnResourceChanged?.Invoke(data, resourceStocks[data]);
+        }
+    }
+
+    public List<ResourceSaveData> GetResourcesSaveData()
+    {
+        var list = new List<ResourceSaveData>();
+        foreach(var kv in resourceStocks)
+        {
+            list.Add(new ResourceSaveData { resourceName = kv.Key.resourceName, amount = kv.Value });
+        }
+        return list;
+    }
+
+    public void LoadResources(List<ResourceSaveData> loadedData)
+    {
+        foreach(var data in loadedData)
+        {
+            var resData = availableResources.FirstOrDefault(x => x.resourceName == data.resourceName);
+            if (resData != null)
+            {
+                if (!resourceStocks.ContainsKey(resData)) resourceStocks.Add(resData, 0);
+                
+                resourceStocks[resData] = data.amount;
+                OnResourceChanged?.Invoke(resData, data.amount);
+            }
         }
     }
 }

@@ -9,8 +9,9 @@ public class SettlerAI : MonoBehaviour
 
 public void StartHarvesting(ResourceNode node)
 {
-    currentTargetNode = node;
-    MoveTo(node.transform.position);
+    MoveTo(node.transform.position); // Önce hareketi başlat (node null edilecek o yüzden)
+    currentTargetNode = node; // Harekete başladıktan sonra hedefi kaydet
+    Debug.Log(node.gameObject.name + " hedefine toplanmak üzere gidiliyor.");
 }
 
 void Update()
@@ -26,6 +27,7 @@ void Update()
             // Eğer bir kaynağa gidiyorsak ve vardık ise toplamaya başla
             if (currentTargetNode != null)
             {
+                Debug.Log(currentTargetNode.gatherTime + " saniye boyunca kaynak toplanıyor...");
                 Invoke("CompleteGathering", currentTargetNode.gatherTime);
             }
         }
@@ -53,5 +55,8 @@ void CompleteGathering()
         targetPosition = destination;
         targetPosition.z = 0; // İzometrik düzlemde Z her zaman 0 olmalı
         isMoving = true;
+        
+        currentTargetNode = null; // Tıklandığında eski kaynak görevini iptal et
+        CancelInvoke("CompleteGathering"); // Varsa devam eden toplamayı iptal et
     }
 }

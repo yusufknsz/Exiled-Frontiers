@@ -6,6 +6,10 @@ public class BuildingManager : MonoBehaviour
     public static BuildingManager Instance { get; private set; }
     private BuildingData currentBuildingToPlace;
 
+    [Header("Save System")]
+    public System.Collections.Generic.List<BuildingData> buildingDatabase = new System.Collections.Generic.List<BuildingData>();
+    private System.Collections.Generic.List<GameObject> placedBuildings = new System.Collections.Generic.List<GameObject>();
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
@@ -26,11 +30,27 @@ public class BuildingManager : MonoBehaviour
         Debug.Log($"Yetersiz! Gereken: {data.woodCost} Odun, Elindeki: {currentWood}");
     }
 }
+    public bool IsPlacingBuilding()
+    {
+        return currentBuildingToPlace != null;
+    }
+
     void Update()
     {
-        if (currentBuildingToPlace != null && Input.GetMouseButtonDown(0))
+        if (currentBuildingToPlace != null)
         {
-            PlaceBuilding();
+            // Sağ tıkla iptal et (Planladığımız extra özellik)
+            if (Input.GetMouseButtonDown(1))
+            {
+                currentBuildingToPlace = null;
+                Debug.Log("İnşaat iptal edildi.");
+                return;
+            }
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                PlaceBuilding();
+            }
         }
     }
 
@@ -41,14 +61,53 @@ public class BuildingManager : MonoBehaviour
         Vector3 spawnPos = Camera.main.ScreenToWorldPoint(mousePos);
         spawnPos.z = 0;
 
-        Instantiate(currentBuildingToPlace.buildingPrefab, spawnPos, Quaternion.identity);
+        GameObject newBuilding = Instantiate(currentBuildingToPlace.buildingPrefab, spawnPos, Quaternion.identity);
+        newBuilding.name = currentBuildingToPlace.buildingName; // Kaydederken türünü bilebilmek için ismini de değiştiriyoruz
+        placedBuildings.Add(newBuilding);
 
-        var wood = ResourceManager.Instance.availableResources.Find(x => x.resourceName == "Wood");
-        var stone = ResourceManager.Instance.availableResources.Find(x => x.resourceName == "Stone");
-
-        ResourceManager.Instance.AddResource(wood, -currentBuildingToPlace.woodCost);
-        if (stone != null) ResourceManager.Instance.AddResource(stone, -currentBuildingToPlace.stoneCost);
+        // Kaynakları temiz bir şekilde eksiltelim
+        ResourceManager.Instance.RemoveResourceByName("Wood", currentBuildingToPlace.woodCost);
+        ResourceManager.Instance.RemoveResourceByName("Stone", currentBuildingToPlace.stoneCost);
         
         currentBuildingToPlace = null;
+    }
+
+    public System.Collections.Generic.List<BuildingSaveData> GetBuildingsSaveData()
+    {
+        var dataList = new System.Collections.Generic.List<BuildingSaveData>();
+        foreach (var b in placedBuildings)
+        {
+            if (b != null)
+            {
+                dataList.Add(new BuildingSaveData { buildingName = b.name, position = b.transform.position });
+            }
+        }
+        return dataList;
+    }
+
+    public void LoadBuildings(System.Collections.Generic.List<BuildingSaveData> loadedDataList)
+    {
+        // Öncelikler dünyadaki mevcut binaları sil
+        foreach (var b in placedBuildings) 
+        {
+            if (b != null) Destroy(b);
+        }
+        placedBuildings.Clear();
+
+        // Gelen veriye göre yeni binalar oluştur
+        foreach (var data in loadedDataList)
+        {
+            var bData = buildingDatabase.FirstOrDefault(x => x.buildingName == data.buildingName);
+            if (bData != null)
+            {
+                GameObject newObj = Instantiate(bData.buildingPrefab, data.position, Quaternion.identity);
+                newObj.name = bData.buildingName; // İsmini tekrar aynı yapıyoruz ki bir daha kaydettiğimizde sorun olmasın
+                placedBuildings.Add(newObj);
+            }
+            else
+            {
+                Debug.LogWarning("Bina bulunamadı: " + data.buildingName + " - buildingDatabase içine ekli olduğundan emin olun!");
+            }
+        }
     }
 }

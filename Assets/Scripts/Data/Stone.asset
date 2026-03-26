@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   resourceName: Stone
   resourceIcon: {fileID: -265593854304381835, guid: fc2c595014ba6314b8b91e0f025db8d3, type: 3}
-  resourceAmount: 10
+  resourceAmount: 0
